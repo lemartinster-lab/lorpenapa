@@ -190,3 +190,62 @@ export function leerVariante(fd: FormData): Resultado<DatosVariante> {
   }
   return { ok: true, datos: { size, color, sku, stock } };
 }
+
+// ---------------------------------------------------------------------
+// Reserva pública ("resérvalo y recógelo")
+// ---------------------------------------------------------------------
+export type DatosReservaForm = {
+  varianteId: string;
+  nombre: string;
+  telefono: string;
+  cantidad: number;
+};
+
+/**
+ * Lee el formulario de reserva. `web` es un campo trampa invisible: una
+ * persona nunca lo rellena; un bot sí. La BD vuelve a validar todo.
+ */
+export function leerReserva(fd: FormData): Resultado<DatosReservaForm> | { ok: false; error: string; bot: true } {
+  if (texto(fd, "web")) return { ok: false, error: "No se pudo completar la reserva.", bot: true };
+
+  const varianteId = texto(fd, "talla");
+  if (!idSchema.safeParse(varianteId).success) return { ok: false, error: "Elige una talla." };
+
+  const nombre = texto(fd, "nombre").replace(/\s+/g, " ");
+  if (nombre.length < 2 || nombre.length > 80) return { ok: false, error: "Escribe tu nombre." };
+
+  const telefono = normalizarTelefono(texto(fd, "telefono"));
+  if (!telefono) return { ok: false, error: "El teléfono no es válido. Ejemplo: 600 11 22 33." };
+
+  const cantidad = Number(texto(fd, "cantidad") || "1");
+  if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 5) {
+    return { ok: false, error: "Puedes reservar entre 1 y 5 unidades." };
+  }
+
+  if (fd.get("consentimiento") !== "on") {
+    return { ok: false, error: "Para reservar tienes que aceptar el tratamiento de tus datos." };
+  }
+  return { ok: true, datos: { varianteId, nombre, telefono, cantidad } };
+}
+
+/** Mensaje para el cliente según el "hint" que devuelve crear_reserva(). */
+export function mensajeErrorReserva(hint: string | null | undefined): string {
+  switch (hint) {
+    case "sin_stock":
+      return "Lo sentimos: acaban de reservar las últimas unidades de esta talla.";
+    case "limite":
+      return "Ya tienes 3 reservas activas en esta tienda. Recoge o cancela alguna antes de hacer otra.";
+    case "no_disponible":
+      return "Este producto ya no está disponible.";
+    case "telefono":
+      return "El teléfono no es válido.";
+    case "nombre":
+      return "Escribe tu nombre.";
+    case "cantidad":
+      return "Puedes reservar entre 1 y 5 unidades.";
+    case "consentimiento":
+      return "Para reservar tienes que aceptar el tratamiento de tus datos.";
+    default:
+      return "No se pudo completar la reserva. Inténtalo de nuevo en unos minutos.";
+  }
+}

@@ -105,12 +105,14 @@ export function BotonBorrarConAviso(props: {
 }
 
 const PESTANAS = [
+  { href: "/panel/reservas", texto: "Reservas" },
   { href: "/panel/productos", texto: "Productos" },
   { href: "/panel/catalogo", texto: "Categorías y marcas" },
   { href: "/panel/tienda", texto: "Tienda" },
 ] as const;
 
-export function Pestanas() {
+/** Pestañas del panel. `pendientes` se muestra como contador en «Reservas». */
+export function Pestanas({ pendientes = 0 }: { pendientes?: number }) {
   const ruta = usePathname();
   return (
     <nav aria-label="Secciones del panel" className="flex gap-1 overflow-x-auto">
@@ -126,6 +128,11 @@ export function Pestanas() {
             }`}
           >
             {p.texto}
+            {p.href === "/panel/reservas" && pendientes > 0 && (
+              <span className="ml-1.5 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white" aria-label={`${pendientes} pendientes`}>
+                {pendientes}
+              </span>
+            )}
           </Link>
         );
       })}

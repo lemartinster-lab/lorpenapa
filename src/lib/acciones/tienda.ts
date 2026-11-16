@@ -1,10 +1,9 @@
 "use server";
 
-import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { exigirSesion, exigirTienda } from "@/lib/datos/sesion";
 import type { EstadoAccion } from "./estado";
-import { fallo, mensajeDeError, registrarError } from "./comun";
+import { actualizar, fallo, mensajeDeError, registrarError } from "./comun";
 import { leerDatosTienda, leerNuevaTienda } from "./formularios";
 
 /** Alta de la tienda. Quien la crea queda como propietario (trigger SQL). */
@@ -33,6 +32,28 @@ export async function guardarDatosTienda(_p: EstadoAccion, fd: FormData): Promis
     return fallo(mensajeDeError(error));
   }
   if (!data?.length) return fallo("Solo el propietario puede cambiar los datos de la tienda.");
-  refresh();
+  actualizar(tienda.slug);
   return { ok: true, mensaje: "Datos guardados." };
+}
+
+/** Publica o retira el catálogo. Solo el propietario (RLS: 0 filas a empleados). */
+export async function cambiarPublicacion(_p: EstadoAccion, fd: FormData): Promise<EstadoAccion> {
+  const { supabase, tienda } = await exigirTienda();
+  const publicar = fd.get("publicar") === "true";
+
+  const { data, error } = await supabase
+    .from("shops")
+    .update({ is_published: publicar })
+    .eq("id", tienda.id)
+    .select("id");
+  if (error) {
+    registrarError("cambiarPublicacion", error);
+    return fallo(mensajeDeError(error));
+  }
+  if (!data?.length) return fallo("Solo el propietario puede publicar o retirar el catálogo.");
+  actualizar(tienda.slug);
+  return {
+    ok: true,
+    mensaje: publicar ? "¡Tienda publicada! Tus clientes ya pueden ver el catálogo y reservar." : "Catálogo retirado: ya no es visible.",
+  };
 }

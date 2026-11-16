@@ -36,3 +36,10 @@ En **Authentication → URL Configuration**, añade `http://localhost:3000/auth/
 npm run typecheck   # tipos de rutas + tsc --noEmit
 npm test            # tests del esquema contra un Postgres real (PGlite)
 ```
+
+## Rutas
+
+- **Público:** `/t/[tienda]` (catálogo con filtros), `/t/[tienda]/p/[producto]` (ficha y «Resérvalo y recógelo»), `/t/[tienda]/privacidad`.
+- **Panel:** `/panel/reservas`, `/panel/productos`, `/panel/catalogo`, `/panel/tienda`, `/panel/qr`.
+
+El catálogo público se cachea y se renueva al editar en el panel, tras cada reserva y, además, cada pocos minutos (para reflejar las reservas que caducan solas). El navegador nunca recibe el stock exacto: solo «disponible», «últimas unidades» o «agotada».

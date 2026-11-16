@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { obtenerSesion, obtenerTienda } from "@/lib/datos/sesion";
+import { contarPendientes } from "@/lib/datos/reservas";
 import { salir } from "@/lib/acciones/auth";
 import { Pestanas } from "./ui";
 
@@ -19,7 +20,7 @@ export default function LayoutPanel({ children }: LayoutProps<"/panel">) {
         </div>
         <div className="mx-auto w-full max-w-5xl px-4">
           <Suspense fallback={<div className="h-9" />}>
-            <Pestanas />
+            <PestanasConContador />
           </Suspense>
         </div>
       </header>
@@ -47,4 +48,11 @@ async function DatosCabecera() {
       </form>
     </div>
   );
+}
+
+/** Pestañas con el número de reservas pendientes (dato de la petición). */
+async function PestanasConContador() {
+  const sesion = await obtenerSesion();
+  const ctx = sesion ? await obtenerTienda(sesion) : null;
+  return <Pestanas pendientes={ctx ? await contarPendientes(ctx) : 0} />;
 }

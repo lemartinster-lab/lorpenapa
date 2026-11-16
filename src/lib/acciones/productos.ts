@@ -1,11 +1,10 @@
 "use server";
 
-import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { exigirTienda } from "@/lib/datos/sesion";
 import { expandirTallas } from "@/lib/domain/tallas";
 import type { EstadoAccion } from "./estado";
-import { ERROR_GENERICO, fallo, leerId, mensajeDeError, registrarError } from "./comun";
+import { ERROR_GENERICO, actualizar, fallo, leerId, mensajeDeError, registrarError } from "./comun";
 import { leerProducto, leerVariante } from "./formularios";
 
 /**
@@ -31,6 +30,7 @@ export async function crearProducto(_p: EstadoAccion, fd: FormData): Promise<Est
     registrarError("crearProducto", error);
     return fallo(mensajeDeError(error));
   }
+  actualizar(tienda.slug);
   // A la ficha, para añadir las tallas
   redirect(`/panel/productos/${data.id}?nuevo=1`);
 }
@@ -52,7 +52,7 @@ export async function guardarProducto(_p: EstadoAccion, fd: FormData): Promise<E
     registrarError("guardarProducto", error, { id, filas: data?.length ?? 0 });
     return fallo(mensajeDeError(error));
   }
-  refresh();
+  actualizar(tienda.slug);
   return { ok: true, mensaje: "Producto guardado." };
 }
 
@@ -67,6 +67,7 @@ export async function borrarProducto(_p: EstadoAccion, fd: FormData): Promise<Es
     if (error.hint !== "reservas_activas") registrarError("borrarProducto", error, { id });
     return fallo(mensajeDeError(error));
   }
+  actualizar(tienda.slug);
   redirect("/panel/productos");
 }
 
@@ -80,7 +81,7 @@ export async function alternarActivo(fd: FormData): Promise<void> {
     .eq("id", id)
     .eq("shop_id", tienda.id);
   if (error) registrarError("alternarActivo", error, { id });
-  refresh();
+  actualizar(tienda.slug);
 }
 
 // ---------------------------------------------------------------------
@@ -131,7 +132,7 @@ export async function anadirTallas(_p: EstadoAccion, fd: FormData): Promise<Esta
     registrarError("anadirTallas", error, { producto });
     return fallo(mensajeDeError(error));
   }
-  refresh();
+  actualizar(tienda.slug);
   return {
     ok: true,
     mensaje:
@@ -159,20 +160,20 @@ export async function guardarVariante(_p: EstadoAccion, fd: FormData): Promise<E
     if (error?.code !== "23505") registrarError("guardarVariante", error, { id });
     return fallo(mensajeDeError(error));
   }
-  refresh();
+  actualizar(tienda.slug);
   return { ok: true, mensaje: "Guardado." };
 }
 
 /** Botones +1 / −1: ajuste atómico en la base de datos (sin carreras). */
 export async function ajustarStock(fd: FormData): Promise<void> {
-  const { supabase } = await exigirTienda();
+  const { supabase, tienda } = await exigirTienda();
   const id = leerId(fd);
   const delta = Number(fd.get("delta"));
   if (!id || ![-1, 1].includes(delta)) return;
   const { error } = await supabase.rpc("ajustar_stock", { p_variante: id, p_delta: delta });
   // "negativo" es esperable (pulsar −1 con stock 0): no es un fallo del sistema
   if (error && error.hint !== "negativo") registrarError("ajustarStock", error, { id, delta });
-  refresh();
+  actualizar(tienda.slug);
 }
 
 /** Borra una talla. Si tiene reservas activas, la BD lo impide y se avisa. */
@@ -185,6 +186,6 @@ export async function borrarVariante(_p: EstadoAccion, fd: FormData): Promise<Es
     if (error.hint !== "reservas_activas") registrarError("borrarVariante", error, { id });
     return fallo(mensajeDeError(error));
   }
-  refresh();
+  actualizar(tienda.slug);
   return { ok: true, mensaje: "Talla borrada." };
 }

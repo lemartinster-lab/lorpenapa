@@ -1,4 +1,6 @@
 import "server-only";
+import { refresh, updateTag } from "next/cache";
+import { etiquetaTienda } from "@/lib/domain/catalogoPublico";
 import { idSchema } from "./formularios";
 import type { EstadoAccion } from "./estado";
 
@@ -57,4 +59,14 @@ export function mensajeDeError(error: ErrorSupabase | null | undefined, porDefec
     return "El precio de oferta tiene que ser menor que el precio normal.";
   }
   return porDefecto;
+}
+
+/**
+ * Tras cualquier cambio que afecte al catálogo: renueva la caché pública de
+ * la tienda (los clientes lo ven en su siguiente visita) y refresca el panel.
+ * Solo se puede llamar desde una Server Action.
+ */
+export function actualizar(slug: string) {
+  updateTag(etiquetaTienda(slug));
+  refresh();
 }

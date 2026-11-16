@@ -1,9 +1,8 @@
 "use server";
 
-import { refresh } from "next/cache";
 import { exigirTienda, type ContextoTienda } from "@/lib/datos/sesion";
 import type { EstadoAccion } from "./estado";
-import { ERROR_GENERICO, fallo, leerId, mensajeDeError, registrarError } from "./comun";
+import { ERROR_GENERICO, actualizar, fallo, leerId, mensajeDeError, registrarError } from "./comun";
 import { buscarDuplicado, leerNombre } from "./formularios";
 
 /**
@@ -40,7 +39,7 @@ async function crear(tabla: Tabla, fd: FormData): Promise<EstadoAccion> {
     registrarError(`crear ${tabla}`, error);
     return fallo(mensajeDeError(error));
   }
-  refresh();
+  actualizar(ctx.tienda.slug);
   return { ok: true, mensaje: `${QUE[tabla] === "marca" ? "Marca" : "Categoría"} «${datos.datos.name}» creada.` };
 }
 
@@ -64,7 +63,7 @@ async function renombrar(tabla: Tabla, fd: FormData): Promise<EstadoAccion> {
     registrarError(`renombrar ${tabla}`, error, { id });
     return fallo(mensajeDeError(error, ERROR_GENERICO));
   }
-  refresh();
+  actualizar(ctx.tienda.slug);
   return { ok: true, mensaje: "Guardado." };
 }
 
@@ -75,7 +74,7 @@ async function borrar(tabla: Tabla, fd: FormData): Promise<void> {
   if (!id) return;
   const { error } = await supabase.from(tabla).delete().eq("id", id).eq("shop_id", tienda.id);
   if (error) registrarError(`borrar ${tabla}`, error, { id });
-  refresh();
+  actualizar(tienda.slug);
 }
 
 export async function crearCategoria(_p: EstadoAccion, fd: FormData) {
@@ -125,5 +124,5 @@ export async function moverCategoria(fd: FormData): Promise<void> {
   );
   const conError = resultados.find((r) => r.error);
   if (conError) registrarError("moverCategoria", conError.error, { id });
-  refresh();
+  actualizar(ctx.tienda.slug);
 }
