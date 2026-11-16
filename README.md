@@ -18,6 +18,7 @@ Las migraciones están en `supabase/migrations/` y se aplican **en orden** desde
 
 1. `20261116000000_esquema_inicial.sql`: tablas, RLS, permisos y funciones de stock y reservas.
 2. `20261116000100_programar_purga.sql`: borrado nocturno de reservas antiguas con `pg_cron` (protección de datos).
+3. `20261116120000_proteger_reservas.sql`: impide borrar tallas o productos con reservas activas, y añade `ajustar_stock()` (botones +1/−1).
 
 En **Authentication → URL Configuration**, añade `http://localhost:3000/auth/confirmar` a *Redirect URLs*.
 

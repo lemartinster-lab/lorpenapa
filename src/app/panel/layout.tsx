@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { obtenerTienda, obtenerSesion } from "@/lib/datos/sesion";
+import { obtenerSesion, obtenerTienda } from "@/lib/datos/sesion";
 import { salir } from "@/lib/acciones/auth";
+import { Pestanas } from "./ui";
 
 export default function LayoutPanel({ children }: LayoutProps<"/panel">) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-neutral-200 bg-white print:hidden">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 pt-3">
           <Link href="/panel" className="text-lg font-bold tracking-tight">
             LorpenaPa
           </Link>
@@ -16,8 +17,13 @@ export default function LayoutPanel({ children }: LayoutProps<"/panel">) {
             <DatosCabecera />
           </Suspense>
         </div>
+        <div className="mx-auto w-full max-w-5xl px-4">
+          <Suspense fallback={<div className="h-9" />}>
+            <Pestanas />
+          </Suspense>
+        </div>
       </header>
-      <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">{children}</div>
+      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</div>
     </div>
   );
 }

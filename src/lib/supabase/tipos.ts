@@ -157,6 +157,7 @@ export type Database = {
         Returns: { codigo: string; caduca: string }[];
       };
       marcar_recogida: { Args: { p_reserva: string }; Returns: undefined };
+      ajustar_stock: { Args: { p_variante: string; p_delta: number }; Returns: number };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

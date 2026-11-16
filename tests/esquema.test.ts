@@ -347,3 +347,62 @@ describe("protección de datos: purga de reservas antiguas", () => {
     expect(await total()).toBe(antes - 1);
   });
 });
+
+// ---------------------------------------------------------------------
+describe("migración 3: reservas activas protegidas y ajuste de stock", () => {
+  it("no se puede borrar una talla con reservas activas", async () => {
+    // talla43 tiene reservas activas de +34677000000
+    await expect(
+      como(db, usuario(ANA), (tx) => tx.query(`delete from variants where id = $1`, [talla43])),
+    ).rejects.toThrow(/reservas activas/);
+  });
+
+  it("tampoco se puede borrar el producto que la contiene", async () => {
+    await expect(
+      como(db, usuario(ANA), (tx) => tx.query(`delete from products where id = $1`, [zapatilla])),
+    ).rejects.toThrow(/reservas activas/);
+  });
+
+  it("una talla sin reservas activas sí se puede borrar", async () => {
+    const id = await como(db, usuario(ANA), async (tx) => {
+      const r = await tx.query<{ id: string }>(
+        `insert into variants (shop_id, product_id, size, stock) values ($1, $2, '47', 0) returning id`,
+        [tiendaA, zapatilla],
+      );
+      return r.rows[0].id;
+    });
+    await como(db, usuario(ANA), async (tx) => {
+      expect((await tx.query(`delete from variants where id = $1`, [id])).affectedRows).toBe(1);
+    });
+  });
+
+  it("ajustar_stock suma y resta de forma atómica", async () => {
+    const antes = (await filas<{ stock: number }>(db.query(`select stock from variants where id = $1`, [talla43])))[0].stock;
+    const tras = await como(db, usuario(IKER), (tx) =>
+      filas<{ s: number }>(tx.query(`select ajustar_stock($1, 2) as s`, [talla43])),
+    );
+    expect(tras[0].s).toBe(antes + 2);
+    const tras2 = await como(db, usuario(IKER), (tx) =>
+      filas<{ s: number }>(tx.query(`select ajustar_stock($1, -1) as s`, [talla43])),
+    );
+    expect(tras2[0].s).toBe(antes + 1);
+  });
+
+  it("ajustar_stock nunca deja el stock en negativo", async () => {
+    await expect(
+      como(db, usuario(ANA), (tx) => tx.query(`select ajustar_stock($1, -100000)`, [talla43])),
+    ).rejects.toThrow(/no válido|por debajo de 0/);
+    await expect(
+      como(db, usuario(ANA), (tx) => tx.query(`select ajustar_stock($1, -999)`, [talla43])),
+    ).rejects.toThrow(/por debajo de 0/);
+  });
+
+  it("otra tienda y el anónimo no pueden ajustar el stock", async () => {
+    await expect(
+      como(db, usuario(BEÑAT), (tx) => tx.query(`select ajustar_stock($1, 5)`, [talla43])),
+    ).rejects.toThrow(/no encontrada/);
+    await expect(
+      como(db, ANONIMO, (tx) => tx.query(`select ajustar_stock($1, 5)`, [talla43])),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
